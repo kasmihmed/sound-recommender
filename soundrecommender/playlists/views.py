@@ -1,12 +1,9 @@
 import json
 
-from django.core.exceptions import ValidationError
-from django.http import HttpResponse, JsonResponse
-from django.shortcuts import render
+from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
 from playlists.models import Playlist
-from sounds.models import Sound
 
 
 # Create your views here.

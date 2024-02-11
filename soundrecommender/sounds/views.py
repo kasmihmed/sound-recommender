@@ -1,6 +1,5 @@
 import json
 
-from django.db import transaction
 from django.http import HttpRequest, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
