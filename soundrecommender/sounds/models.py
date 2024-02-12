@@ -26,6 +26,11 @@ class Sound(models.Model):
     genres = models.JSONField()
     credits = models.JSONField()
 
+    def save(self, *args, **kwargs):
+        self.validate_genres(self.genres)
+        self.validate_credits(self.credits)
+        super().save(*args, **kwargs)
+
     def to_dict(self):
         return {
             "id": self.pk,
