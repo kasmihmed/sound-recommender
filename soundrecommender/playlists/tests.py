@@ -1,7 +1,5 @@
 import json
-
 from django.test import TestCase, Client
-
 from playlists.models import Playlist
 from sounds.models import Sound
 
@@ -11,12 +9,11 @@ class PlaylistTests(TestCase):
 
     def setUp(self):
         self.test_sound1 = Sound.objects.create(title='Test Sound',
-                             bpm=80,
-                             duration_in_seconds=320,
-                             genres=json.dumps([]),
+                                                bpm=80,
+                                                duration_in_seconds=320,
+                                                genres=json.dumps([]),
                                                 credits=json.dumps([]))
         self.c = Client()
-
 
     def test_create_playlist(self):
         data = {'data': [{'title': 'Test Playlist', 'sounds': [int(self.test_sound1.pk)]}]}
@@ -28,3 +25,30 @@ class PlaylistTests(TestCase):
         assert json.loads(response.content) == data_with_id, json.loads(response.content)
 
 
+class RecommendationTests(TestCase):
+    def setUp(self):
+        self.pop_sound1 = Sound.objects.create(title='FAST POP Sound',
+                                               bpm=120,
+                                               duration_in_seconds=320,
+                                               genres=['pop'],
+                                               credits=[{'name': 'author1', 'role': 'PRODUCER'}])
+
+        self.pop_sound2 = Sound.objects.create(title='SLOW SHORT ROCK Sound',
+                                               bpm=20,
+                                               duration_in_seconds=20,
+                                               genres=['rock'],
+                                               credits=[{'name': 'author1', 'role': 'PRODUCER'}])
+
+        self.pop_playlist1 = Playlist.objects.create(title="POP Playlist")
+        self.pop_sound3 = Sound.objects.create(title='PLAYLIST POP Sound',
+                                               bpm=120,
+                                               duration_in_seconds=320,
+                                               genres=['pop'],
+                                               credits=[{'name': 'author1', 'role': 'PRODUCER'}])
+        self.pop_playlist1.sounds.add(self.pop_sound3)
+        self.c = Client()
+
+    def test_recommendation_uses_metadata_correctly(self):
+        response = self.c.get('/sounds/recommended', {'playlistId': self.pop_playlist1.pk})
+        assert response.status_code == 200
+        assert response.json() == {'data': [self.pop_sound1.to_dict()]}

@@ -1,80 +1,95 @@
-import math
 from collections import defaultdict
+from dataclasses import dataclass
 
 from playlists.models import Playlist
-from sounds.models import Sound
+from sounds.models import Sound, Genre, CreditRole, Credit
 
 
+@dataclass
+class Range:
+    min: int
+    max: int
+
+    def in_range(self, value: int) -> bool:
+        return value in range(self.min, self.max + 1)
+
+
+@dataclass
 class Score:
 
     @classmethod
-    def get_genres_score(cls, sound_genres, weigths_by_genres) -> float:
+    def get_genres_score(cls, sound_genres: list[Genre], weights_by_genres: dict[str, int]) -> float:
         score = 0
         for genre in sound_genres:
-            score += weigths_by_genres.get(genre, 0)
+            score += weights_by_genres.get(genre, 0)
 
-        return score / sum(weigths_by_genres.values())
+        return score / sum(weights_by_genres.values())
 
     @classmethod
-    def get_credit_score(cls, sound_credits, weigths_by_credits) -> float:
+    def get_credit_score(cls, sound_credits: list[Credit], weights_by_credits: dict[tuple[str, str], int]) -> float:
         score = 0
         for credit in sound_credits:
-            score += weigths_by_credits.get((credit['name'], credit['role']), 0)
+            score += weights_by_credits.get((credit['name'], credit['role']), 0)
 
-        return score / sum(weigths_by_credits.values())
-
-    @classmethod
-    def get_bpm_score(cls, song1, song2) -> float:
-        return 1 if (math.abs(song1.bpm - song2.bpm) < 10) else 1 / math.abs(song1.bpm - song2.title)
+        return score / sum(weights_by_credits.values())
 
     @classmethod
-    def get_genres_score(cls, sound_genres: list[str], playlist_genres: list[str]) -> float:
-        return len(set(sound_genres).intersection(set(playlist_genres))) / len(playlist_genres)
+    def get_bpm_score(cls, sound_bpm: int, playlist_bpm_range: Range) -> float:
+        return 1 if sound_bpm in range(playlist_bpm_range.min, playlist_bpm_range.max+1) else 0
 
     @classmethod
-    def get_duration_score(cls, sound, playlist_min, playlist_max) -> float:
-        return 1 if sound.duration_in_seconds in range(playlist_min, playlist_max) else 0
+    def get_duration_score(cls, sound: Sound, duration_range: Range) -> float:
+        return 1 if sound.duration_in_seconds in range(duration_range.min, duration_range.max+1) else 0
+
+    @classmethod
+    def get_sound_score_against_playlist(cls, playlist: Playlist, sound: Sound) -> float:
+        playlist_meta = PlaylistMeta.from_playlist(playlist)
+        # TODO: improve this
+        title_score = 1 if sound.title in playlist_meta.titles else 0
+        duration_score = Score.get_duration_score(sound, playlist_meta.duration_range)
+        bpm_score = Score.get_bpm_score(sound.bpm, playlist_meta.bpm_range)
+        genres_score = Score.get_genres_score(sound.genres, playlist_meta.genres_with_weights)
+        credit_score = Score.get_credit_score(sound.credits, playlist_meta.credits_with_weights)
+        return credit_score + genres_score + bpm_score + duration_score + title_score / 6
 
 
-def build_playlist_genres_weights(playlist: Playlist) -> dict[str, int]:
-    sounds = playlist.sounds.all()
-    count_by_genres = defaultdict(int)
-    for sound in sounds:
-        for genre in sound.genres:
-            count_by_genres[genre] += 1
+@dataclass
+class PlaylistMeta:
+    titles: list[str]
+    duration_range: Range
+    bpm_range: Range
+    genres_with_weights: dict[Genre, int]
+    credits_with_weights: dict[tuple[str, CreditRole], int]
 
-    return count_by_genres
+    @classmethod
+    def build_credits(cls, sounds: list[Sound]):
+        count_by_credits: defaultdict[tuple[str, CreditRole], int] = defaultdict(int)
+        for sound in sounds:
+            credits = sound.credits
+            for credit in credits:
+                print(credit)
+                count_by_credits[(credit['name'], credit['role'])] += 1
 
+        return count_by_credits
 
-def build_credits(playlist: Playlist):
-    sounds = playlist.sounds.all()
-    count_by_credits = defaultdict(int)
-    for sound in sounds:
-        for credit in sound.credits:
-            count_by_credits[(credit['name'], credit['role'])] += 1
+    @classmethod
+    def build_playlist_genres_weights(cls, sounds: list[Sound]) -> dict[Genre, int]:
+        count_by_genres: defaultdict[Genre, int] = defaultdict(int)
+        for sound in sounds:
+            for genre in sound.genres:
+                count_by_genres[genre] += 1
 
-    return count_by_credits
+        return count_by_genres
 
-
-def build_playlist_flat_meta_with_weights(playlist):
-    credits_with_weights = build_credits(playlist)
-    genres_with_weights = build_playlist_genres_weights(playlist)
-    sounds = playlist.sounds.all()
-    titles = {sound.title for sound in sounds}
-    durations = [sound.duration_in_seconds for sound in sounds]
-    duration_in_seconds_range = (max(durations), min(durations))
-    bpm = [sound.bpm for sound in sounds]
-    return titles, duration_in_seconds_range, bpm, genres_with_weights, credits_with_weights
-
-
-def get_score_against_playlist(playlist: Playlist, sound: Sound) -> float:
-    titles, duration_in_seconds_range, bpm, genres_with_weights, credits_with_weights = build_playlist_flat_meta_with_weights(playlist)
-    # TODO: improve this
-    title_score = 1 if sound.title in titles else 0
-    # TODO: double check this
-    duration_score = Score.get_duration_score(sound, duration_in_seconds_range[0], duration_in_seconds_range[1])
-    # TODO: update this
-    bpm_score = Score.get_bpm_score(sound, playlist.sounds.all()[0])
-    genres_score = Score.get_genres_score(sound.genres, genres_with_weights)
-    credit_score = Score.get_credit_score(sound.credits, credits_with_weights)
-    return credit_score + genres_score + bpm_score + bpm_score + duration_score + title_score / 6
+    @classmethod
+    def from_playlist(cls, playlist: Playlist):
+        sounds = list(playlist.sounds.all())
+        credits_with_weights = cls.build_credits(sounds)
+        genres_with_weights = cls.build_playlist_genres_weights(sounds)
+        durations = [sound.duration_in_seconds for sound in sounds]
+        bpms = [sound.bpm for sound in sounds]
+        return cls(titles=[sound.title for sound in sounds],
+                   duration_range=Range(min=min(durations), max=max(durations)),
+                   bpm_range=Range(min=min(bpms), max=max(bpms)),
+                   genres_with_weights=genres_with_weights,
+                   credits_with_weights=credits_with_weights)

@@ -35,7 +35,7 @@ class Sound(models.Model):
                 'credits': self.credits}
 
     def flat_meta_data(self):
-        flat_credits = {f'credit_{credit['role']}':  credit['name'] for credit in self.credits}
+        flat_credits = {f'credit_{credit["role"]}':  credit['name'] for credit in self.credits}
         return {'bpm': self.bpm,
                 'title': self.title,
                 'duration_in_seconds': self.duration_in_seconds,
