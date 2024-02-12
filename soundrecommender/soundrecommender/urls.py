@@ -16,7 +16,7 @@ Including another URLconf
 """
 from django.urls import path
 
-from playlists.views import create_playlist, get_recommendation
+from playlists.views import create_playlist, get_recommendation, get_playlist
 from sounds.views import create_sound
 
 from sounds.views import get_sounds
@@ -26,6 +26,7 @@ urlpatterns = [
     #path('admin/', admin.site.urls),
     path('admin/sounds', create_sound, name='create_sound'),
     path('sounds', get_sounds, name='get_sounds'),
+    path('playlists/<int:playlist_id>', get_playlist, name='get_playlist'),
     path('playlists', create_playlist, name='create_playlist'),
     path('sounds/recommended', get_recommendation, name='get_recommendation'),
 ]
