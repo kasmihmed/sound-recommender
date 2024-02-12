@@ -34,19 +34,27 @@ class Sound(models.Model):
                 'genres': self.genres,
                 'credits': self.credits}
 
+    def flat_meta_data(self):
+        flat_credits = {f'credit_{credit['role']}':  credit['name'] for credit in self.credits}
+        return {'bpm': self.bpm,
+                'title': self.title,
+                'duration_in_seconds': self.duration_in_seconds,
+                'genres': self.genres,
+                **flat_credits}
+
 
     @classmethod
     def validate_genres(cls, genres: list[str]):
         valid_genres = {g.value for g in Genre}
         non_valid_genres = set(map(lambda g:g.upper(), genres)) - valid_genres
         if len(non_valid_genres) > 0:
-            non_valid_genres = ", ".join(non_valid_genres)
-            raise ValueError(f"the given genre(s) is/are not recognised: {non_valid_genres}")
+            formated_non_valid_genres = ", ".join(non_valid_genres)
+            raise ValueError(f"the given genre(s) is/are not recognised: {formated_non_valid_genres}")
 
     @classmethod
     def validate_credits(cls, credits: list[Credit]):
         valid_credit_roles = {g.value for g in CreditRole}
         non_valid_credit_roles = set(map(lambda r: r.upper(), (c['role'] for c in credits))) - valid_credit_roles
         if len(non_valid_credit_roles) > 0:
-            non_valid_credit_roles = ", ".join(non_valid_credit_roles)
-            raise ValueError(f"the given credit role(s) is/are not recognised: {non_valid_credit_roles}")
+            formated_non_valid_credit_roles = ", ".join(non_valid_credit_roles)
+            raise ValueError(f"the given credit role(s) is/are not recognised: {formated_non_valid_credit_roles}")
