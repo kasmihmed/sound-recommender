@@ -17,7 +17,7 @@ tests:
 	python manage.py test
 
 dev-server:
-	python manage.py runserver
+	python manage.py runserver 7070
 
 lint:
 	ruff . && mypy .
