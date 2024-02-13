@@ -20,23 +20,28 @@ def get_playlist(request: HttpRequest, playlist_id: int):
 
 
 @csrf_exempt
-@require_http_methods(["POST"])
+@require_http_methods(["GET", "POST"])
 def create_playlist(request: HttpRequest):
     # TODO: handle bad json format
-    created_objs = []
-    try:
-        data = get_data_from_request_body(request)
-        for item in data:
-            sound_ids = [int(s_id) for s_id in item["sounds"]]
-            Playlist.validate_sounds(sound_ids)
-            playlist = Playlist.objects.create(title=item["title"])
-            playlist.sounds.add(*list(map(lambda s: int(s), item["sounds"])))
-            created_objs.append(playlist)
-        return JsonResponse(
-            data={"data": [obj.to_dict() for obj in created_objs]}, status=201
-        )
-    except (NotFoundSoundId, JsonParsingError) as e:
-        return JsonResponse(data={"error": str(e)}, status=400)
+    if request.method == "POST":
+        created_objs = []
+        try:
+            data = get_data_from_request_body(request)
+            for item in data:
+                sound_ids = [int(s_id) for s_id in item["sounds"]]
+                Playlist.validate_sounds(sound_ids)
+                playlist = Playlist.objects.create(title=item["title"])
+                playlist.sounds.add(*list(map(lambda s: int(s), item["sounds"])))
+                created_objs.append(playlist)
+            return JsonResponse(
+                data={"data": [obj.to_dict() for obj in created_objs]}, status=201
+            )
+        except (NotFoundSoundId, JsonParsingError) as e:
+            return JsonResponse(data={"error": str(e)}, status=400)
+
+    else:
+        playlists = Playlist.objects.all()
+        return JsonResponse(data={"data": [p.dict() for p in playlists]})
 
 
 @require_http_methods(["GET"])

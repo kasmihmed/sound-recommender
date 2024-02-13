@@ -8,8 +8,9 @@ RUN pip install --no-cache-dir -r /code/requirements.txt
 
 COPY ./soundrecommender /code/soundrecommender
 
+RUN python ./soundrecommender/manage.py migrate
 
-EXPOSE 8080
+EXPOSE 7070
 
-CMD ["python", "./soundrecommender/manage.py", "runserver", "8080"]
+CMD ["python", "./soundrecommender/manage.py", "runserver", "0.0.0.0:7070"]
 

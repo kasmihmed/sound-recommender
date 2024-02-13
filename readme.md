@@ -1,37 +1,41 @@
 # sound recommender
-
-## 1. create a virtual env
+## run in a docker container
+```
+docker compose up --build
+```
+## commands (without docker)
+### 1. create a virtual env
 inside to the `soundrecommender` folder, run:
 
 ```
 make create-venv
 ```
 
-## 2. activate the virtual env
+### 2. activate the virtual env
 
 in the same directory run :
 ```
 source ./venv/bin/activate
 ```
 
-## 3. install the dependencies 
+### 3. install the dependencies 
 ```
 make install-dependencies
 ```
 
-## 4.run the needed migrations
+### 4.run the needed migrations
 
 ```
 make db-migrations
 ```
 
-# 5. run the tests
+### 5. run the tests
 
 ```
 make tests
 ```
 
-# 6. run the dev server
+### 6. run the dev server
 the default address is : `http://127.0.0.1:8000/`
 ```
 make dev-server
